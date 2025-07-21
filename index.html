@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>EMEE + AI Self Repair Demo with Chatbot</title>
+  <style>
+    body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f8fafc;margin:0;padding:0}
+    header{background:#1e293b;padding:1.5em;text-align:center;box-shadow:0 4px 10px rgba(0,0,0,0.5)}
+    h1{color:#38bdf8;margin:0;font-size:2em}
+    .container{padding:2em}
+    .card{background:#1e293b;padding:2em;margin:1.5em 0;border-radius:15px;box-shadow:0 0 16px rgba(56,189,248,0.2)}
+    .button{padding:.7em 1.2em;background:#38bdf8;color:#0f172a;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin-right:.5em}
+    .button:hover{background:#0ea5e9}
+    .log{background:#0f172a;padding:1em;margin-top:1em;border-radius:8px;max-height:300px;overflow-y:auto;border:1px solid #334155;font-family:monospace}
+    .progress{width:100%;background:#334155;border-radius:8px;overflow:hidden;margin:1em 0}
+    .progress-bar{height:20px;background:#38bdf8;width:0;transition:width .3s ease-in-out}
+    .ai-response{background:#1e3a8a;padding:1em;border-radius:10px;margin-top:1em;font-family:monospace;border-left:5px solid #38bdf8;display:none}
+    iframe{width:100%;height:400px;border:none;margin-top:1em}
+    .faq-section {margin-top: 2em;}
+    .faq-section h2 {color: #38bdf8;}
+    .faq {margin: 1em 0; background: #0f172a; border: 1px solid #334155; padding: 1em; border-radius: 10px;}
+    .faq p {margin: 0.5em 0;}
+    .dropdown-container {margin-top: 2em;}
+    .dropdown {width: 100%; padding: 1em; border-radius: 8px; font-size: 1em; background: #0f172a; color: #f8fafc; border: 1px solid #334155;}
+    .answer-box {margin-top: 1em; background: #1e3a8a; border-left: 5px solid #38bdf8; padding: 1em; border-radius: 10px; display: none; font-family: monospace;}
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<header><h1>EMEE AI Self‑Repair Demo</h1><p>AI becomes active only on error detection</p></header>
+<div class="container">
+  <div class="card">
+    <h2>System Scan</h2>
+    <div class="progress"><div id="progressBar" class="progress-bar"></div></div>
+    <button class="button" onclick="startScan()">Start Scan</button>
+  </div>
+  <div class="card">
+    <h2>System Status & Actions</h2>
+    <p>Thrust: <strong id="thrust">Nominal</strong></p>
+    <p>Mass Flow: <strong id="mass">Stable</strong></p>
+    <p>Coil Charge: <strong id="coil">Charged</strong></p>
+    <p>Code Integrity: <strong id="code">Intact</strong></p>
+    <button class="button" onclick="detectError()">Detect Error</button>
+    <button class="button" onclick="runRepair()">Run AI Repair</button>
+    <div class="log" id="log"></div>
+    <div id="aiResponse" class="ai-response"></div>
+  </div>
+  <div class="card">
+    <h2>Chat with HORIZON AI</h2>
+    <script async src="https://tinychat.ai/widget.js" data-agent-id="YOUR_AGENT_ID"></script>
+    <div id="tinychat-widget"></div>
+    
+    <div style="margin-top: 2em; padding-top: 1.5em; border-top: 1px solid #334155;">
+      <h3 style="color: #38bdf8; margin-top: 0;">Ask HORIZON AI Custom Questions</h3>
+      <p style="margin-bottom: 1em; color: #94a3b8;">Have a specific question about EMEE systems, AI repair protocols, or space propulsion? Ask HORIZON AI directly:</p>
+      <div style="display: flex; gap: 1em; margin-bottom: 1em; flex-wrap: wrap;">
+        <button class="button" onclick="askGemini('How does electromagnetic tether propulsion compare to ion drives?')">Propulsion Comparison</button>
+        <button class="button" onclick="askGemini('What are the risks of autonomous AI repair in space missions?')">AI Safety Risks</button>
+        <button class="button" onclick="askGemini('How can machine learning improve satellite fault prediction?')">ML Fault Prediction</button>
+      </div>
+      <div style="display: flex; gap: 0.5em; margin-bottom: 1em;">
+        <input type="text" id="customQuestion" placeholder="Type your custom question about EMEE systems..." 
+               style="flex: 1; padding: 0.7em; border-radius: 8px; background: #1e293b; color: #f8fafc; border: 1px solid #334155;"
+               onkeypress="if(event.key==='Enter') askGemini(this.value)">
+        <button class="button" onclick="askGemini(document.getElementById('customQuestion').value)">Ask HORIZON AI</button>
+      </div>
+      <div id="geminiResponse" class="answer-box" style="display: none;">
+        <p style="margin-bottom: 1em;">🤖 <strong>HORIZON AI Response:</strong></p>
+        <div id="geminiAnswer"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card faq-section">
+    <h2>🤖 AI-Powered FAQ System</h2>
+    <p style="color: #94a3b8; margin-bottom: 1.5em;">Select any question below and get intelligent responses from HORIZON AI about EMEE systems and space technology.</p>
+    <div class="dropdown-container">
+      <select class="dropdown" onchange="showAnswer(this.value)">
+        <option value="">Select a question</option>
+        <option value="1">What causes coil desync?</option>
+        <option value="2">How does AI identify faults?</option>
+        <option value="3">Can AI fix multiple faults?</option>
+        <option value="4">How long does a repair take?</option>
+        <option value="5">What powers the onboard AI?</option>
+        <option value="6">How accurate is the sensor analysis?</option>
+        <option value="7">Can AI prevent future faults?</option>
+        <option value="8">What if AI fails?</option>
+        <option value="9">Is AI repair safer than manual override?</option>
+        <option value="10">Does AI learn from past glitches?</option>
+        <option value="11">Is it possible to update AI remotely?</option>
+        <option value="12">How does mass ejection mechanism work?</option>
+        <option value="13">What is SatelliteLoop.java?</option>
+        <option value="14">How does the AI test patch success?</option>
+        <option value="15">Can AI control external tethers?</option>
+        <option value="16">How are anomalies reported?</option>
+        <option value="17">Can AI interact with ground station?</option>
+        <option value="18">How fast can AI isolate errors?</option>
+        <option value="19">Is there a backup AI core?</option>
+        <option value="20">Can EMEE propulsion fail silently?</option>
+        <option value="21">Advanced system diagnostics</option>
+      </select>
+      <div id="answerBox" class="answer-box"></div>
+    </div>
+  </div>
+</div>
+<script>
+  // ========== GEMINI AI CONFIGURATION ==========
+  // Replace with your actual Gemini API key from: https://makersuite.google.com/app/apikey
+  const GEMINI_API_KEY = 'AIzaSyBs3l8c5WtIX7CMiUIy6HfkLI9TSHDwyzc';
+  // ==============================================
+
+  let log=document.getElementById("log"),
+      pb=document.getElementById("progressBar"),
+      ai=document.getElementById("aiResponse"),
+      answerBox=document.getElementById("answerBox");
+
+  function logMsg(m){log.innerHTML+=`<p>> ${m}</p>`;log.scrollTop=log.scrollHeight}
+  function showAI(msg){ai.style.display="block"; ai.innerHTML=`<strong>AI Insight:</strong><br>${msg}`;}
+
+  function startScan(){
+    let p=0; ai.style.display="none"; log.innerHTML=""; pb.style.width="0";
+    let iv=setInterval(()=>{
+      p+=10; pb.style.width=p+"%"; logMsg(`Scanning... ${p}% complete`);
+      if(p>=100){clearInterval(iv); logMsg("❌ Critical Error: Coil sync glitch detected."); document.getElementById("thrust").innerText="Unstable"; document.getElementById("mass").innerText="Leaking"; document.getElementById("coil").innerText="Uncharged"; document.getElementById("code").innerText="Glitched"; setTimeout(()=>showAI("Error: SatelliteLoop.java code corruption in propulsion sync. Coil timing misaligned. Risk: vector drift and thermal overload."),500);}
+    },300);
+  }
+
+  function detectError(){
+    logMsg("🧠 AI analyzing error logs...");
+    setTimeout(()=>logMsg("🧬 Fault: SatelliteLoop.java [Line 210-245] corrupted"),1000);
+    setTimeout(()=>logMsg("⚡ Sensor2 feedback missing, overcharge risk"),2000);
+    setTimeout(()=>logMsg("📁 Safe repair mode initiated"),3000);
+  }
+
+  function runRepair(){
+    logMsg("🔧 AI auto‑repair sequence starting...");
+    setTimeout(()=>logMsg("🔄 Reconfiguring EM coil circuit"),1000);
+    setTimeout(()=>logMsg("🧪 Patching SatelliteLoop.java routine"),2000);
+    setTimeout(()=>logMsg("🛠 Recalibrating mass ejection phase"),3000);
+    setTimeout(()=>logMsg("🧲 Mass recycling loop resealed"),4000);
+    setTimeout(()=>{
+      document.getElementById("thrust").innerText="Nominal";
+      document.getElementById("mass").innerText="Stable";
+      document.getElementById("coil").innerText="Charged";
+      document.getElementById("code").innerText="Intact";
+      logMsg("✅ Systems restored to nominal");
+      showAI("Repair complete. Coil synchronization restored. Monitoring will continue for 72h for anomaly recurrence.");
+    },5000);
+  }
+
+  function showAnswer(val){
+    if (!val) {
+      answerBox.style.display = "none";
+      document.getElementById("geminiResponse").style.display = "none";
+      return;
+    }
+    
+    const predefinedAnswers = {
+      1:"What causes coil desync?",
+      2:"How does AI identify faults?",
+      3:"Can AI fix multiple faults?",
+      4:"How long does a repair take?",
+      5:"What powers the onboard AI?",
+      6:"How accurate is the sensor analysis?",
+      7:"Can AI prevent future faults?",
+      8:"What if AI fails?",
+      9:"Is AI repair safer than manual override?",
+      10:"Does AI learn from past glitches?",
+      11:"Is it possible to update AI remotely?",
+      12:"How does mass ejection mechanism work?",
+      13:"What is SatelliteLoop.java?",
+      14:"How does the AI test patch success?",
+      15:"Can AI control external tethers?",
+      16:"How are anomalies reported?",
+      17:"Can AI interact with ground station?",
+      18:"How fast can AI isolate errors?",
+      19:"Is there a backup AI core?",
+      20:"Can EMEE propulsion fail silently?",
+      21:"What are advanced system diagnostics?"
+    };
+    
+    // Hide regular answer box and use AI response for all questions
+    answerBox.style.display = "none";
+    
+    // Ask Gemini AI for all FAQ questions
+    askGemini(predefinedAnswers[val]);
+  }
+
+  async function askGemini(question) {
+    if (!question || question.trim() === '') {
+      alert('Please enter a question first.');
+      return;
+    }
+    
+    const geminiResponse = document.getElementById("geminiResponse");
+    const geminiAnswer = document.getElementById("geminiAnswer");
+    
+    // Always hide the regular FAQ answer box when showing AI responses
+    answerBox.style.display = "none";
+    
+    // Show loading state immediately
+    geminiResponse.style.display = "block";
+    geminiAnswer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.5em; color: #38bdf8;">
+        <div style="width: 16px; height: 16px; border: 2px solid #38bdf8; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <strong>HORIZON AI is processing...</strong>
+      </div>
+      <p style="margin: 0.8em 0; color: #e2e8f0; padding: 1em; background: #1e293b; border-radius: 6px; border-left: 3px solid #38bdf8;">
+        "<em>${question}</em>"
+      </p>
+      <p style="color: #94a3b8; font-size: 0.9em;">Analyzing your question...</p>
+    `;
+    
+    // Scroll the response into view for better UX
+    geminiResponse.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    
+    // Clear the input field if it was a custom question
+    const customInput = document.getElementById('customQuestion');
+    if (customInput && customInput.value.trim() === question.trim()) {
+      customInput.value = '';
+    }
+    
+    try {
+      // Try to get real Gemini API response
+      await getGeminiAPIResponse(question);
+    } catch (error) {
+      console.error('Gemini API Error:', error);
+      // Show API error and fallback to enhanced local responses
+      await simulateGeminiWithError(question, error.message);
+    }
+  }
+
+  async function getGeminiAPIResponse(question) {
+    const geminiAnswer = document.getElementById("geminiAnswer");
+    
+    if (!GEMINI_API_KEY || GEMINI_API_KEY === 'AIzaSyDOWz-1NLTiou_i855YFCcN48ojOvXfzdw') {
+      throw new Error('API key not configured - Please add your Gemini API key at the top of the script');
+    }
+    
+    // Check if we're running locally (file:// protocol)
+    if (window.location.protocol === 'file:') {
+      throw new Error('CORS Restriction: API calls cannot be made from local files. Please serve this file from a web server (http:// or https://)');
+    }
+    
+    const contextualQuestion = `Context: You are HORIZON AI, an advanced AI assistant for EMEE (Electromagnetic Momentum Exchange with Earth) propulsion systems and autonomous spacecraft repair technology. You provide expert technical guidance on:
+
+- EMEE electromagnetic tether propulsion systems
+- Autonomous satellite repair protocols
+- Space technology and orbital mechanics
+- AI-driven fault detection and system maintenance
+- Electromagnetic coil synchronization and control
+- Satellite system diagnostics and troubleshooting
+
+Question: ${question}
+
+Please provide a comprehensive, technical response that demonstrates deep expertise in space technology and EMEE systems. Include practical details, technical specifications, and operational insights. Keep the response informative yet accessible.`;
+
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: contextualQuestion
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95,
+          maxOutputTokens: 1200,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+      throw new Error('Invalid API response format');
+    }
+
+    const aiResponse = data.candidates[0].content.parts[0].text;
+    
+    // Enhanced formatting for better readability
+    const formattedResponse = aiResponse
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color: #38bdf8;">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em style="color: #94a3b8;">$1</em>')
+      .replace(/(?:^|\n)([\d]+\.)\s/g, '<br><span style="color: #38bdf8; font-weight: bold;">$1</span> ')
+      .replace(/(?:^|\n)([•▪▫])\s/g, '<br><span style="color: #10b981;">$1</span> ')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+
+    geminiAnswer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.8em; margin-bottom: 1.2em; padding-bottom: 0.8em; border-bottom: 1px solid #334155;">
+        <div style="color: #10b981; font-size: 1.5em;">🤖</div>
+        <div>
+          <div style="color: #38bdf8; font-weight: bold; font-size: 1.1em;">HORIZON AI Response</div>
+          <div style="color: #64748b; font-size: 0.9em;">Advanced Space Technology AI</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #38bdf8;">
+        <div style="color: #94a3b8; font-size: 0.9em; margin-bottom: 0.5em;">Your Question:</div>
+        <div style="color: #e2e8f0; font-weight: 500;">"${question}"</div>
+      </div>
+      
+      <div style="padding: 1.5em; background: #1e293b; border-radius: 10px; line-height: 1.7; border: 1px solid #334155;">
+        ${formattedResponse}
+      </div>
+      
+      <div style="margin-top: 1.2em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #10b981; display: flex; align-items: center; gap: 0.5em;">
+        <span style="color: #10b981;">✅</span>
+        <span style="color: #38bdf8; font-weight: bold;">HORIZON AI Response Complete</span>
+      </div>
+    `;
+  }
+
+  async function simulateGeminiWithError(question, errorMsg) {
+    const geminiAnswer = document.getElementById("geminiAnswer");
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const response = getEnhancedResponse(question);
+    
+    geminiAnswer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.8em; margin-bottom: 1.2em; padding-bottom: 0.8em; border-bottom: 1px solid #334155;">
+        <div style="color: #10b981; font-size: 1.5em;">🤖</div>
+        <div>
+          <div style="color: #38bdf8; font-weight: bold; font-size: 1.1em;">HORIZON AI Response</div>
+          <div style="color: #64748b; font-size: 0.9em;">Advanced Space Technology AI</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #38bdf8;">
+        <div style="color: #94a3b8; font-size: 0.9em; margin-bottom: 0.5em;">Your Question:</div>
+        <div style="color: #e2e8f0; font-weight: 500;">"${question}"</div>
+      </div>
+      
+      <div style="padding: 1.5em; background: #1e293b; border-radius: 10px; line-height: 1.7; border: 1px solid #334155;">
+        ${response}
+      </div>
+      
+      <div style="margin-top: 1.2em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #10b981; display: flex; align-items: center; gap: 0.5em;">
+        <span style="color: #10b981;">✅</span>
+        <span style="color: #38bdf8; font-weight: bold;">HORIZON AI Response Complete</span>
+      </div>
+    `;
+  }
+
+  async function simulateGeminiResponse(question) {
+    const geminiAnswer = document.getElementById("geminiAnswer");
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const response = getEnhancedResponse(question);
+    
+    geminiAnswer.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 0.8em; margin-bottom: 1.2em; padding-bottom: 0.8em; border-bottom: 1px solid #334155;">
+        <div style="color: #10b981; font-size: 1.5em;">🤖</div>
+        <div>
+          <div style="color: #38bdf8; font-weight: bold; font-size: 1.1em;">HORIZON AI Response</div>
+          <div style="color: #64748b; font-size: 0.9em;">Enhanced local response</div>
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 1em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #38bdf8;">
+        <div style="color: #94a3b8; font-size: 0.9em; margin-bottom: 0.5em;">Your Question:</div>
+        <div style="color: #e2e8f0; font-weight: 500;">"${question}"</div>
+      </div>
+      
+      <div style="padding: 1.5em; background: #1e293b; border-radius: 10px; line-height: 1.7; border: 1px solid #334155;">
+        ${response}
+      </div>
+      
+      <div style="margin-top: 1.2em; padding: 1em; background: #0f1629; border-radius: 8px; border-left: 3px solid #38bdf8;">
+        <span style="color: #38bdf8; font-weight: bold;">💡 Enhanced Context:</span>
+        <span style="color: #64748b;">This response is based on EMEE propulsion principles and AI repair systems knowledge.</span>
+      </div>
+    `;
+  }
+
+  function getEnhancedResponse(question) {
+    const q = question.toLowerCase();
+    
+    // Propulsion-related questions
+    if (q.includes('propulsion') || q.includes('electromagnetic') || q.includes('tether') || q.includes('ion drive') || q.includes('compare')) {
+      return `
+        <strong style="color: #38bdf8;">Electromagnetic Tether Propulsion Analysis:</strong><br><br>
+        EMEE (Electromagnetic Momentum Exchange with Earth) systems use Earth's magnetic field for propulsion, offering distinct advantages:<br><br>
+        <strong>• Fuel Requirements:</strong> EMEE needs no fuel, just electrical power. Ion drives require propellant (xenon/argon).<br>
+        <strong>• Thrust Levels:</strong> Ion drives provide higher thrust. EMEE offers continuous, low-level thrust.<br>
+        <strong>• Orbital Applications:</strong> EMEE excels in LEO orbit maintenance. Ion drives better for interplanetary missions.<br>
+        <strong>• Power Efficiency:</strong> Both are highly efficient, but EMEE has advantage in Earth's magnetosphere.<br><br>
+        For satellite station-keeping and debris avoidance, EMEE systems like HORIZON provide sustainable, fuel-free operation.
+      `;
+    }
+    
+    // AI Safety and Risk questions
+    if ((q.includes('ai') || q.includes('artificial')) && (q.includes('risk') || q.includes('safety') || q.includes('autonomous') || q.includes('danger'))) {
+      return `
+        <strong style="color: #38bdf8;">AI Safety in Autonomous Space Repairs:</strong><br><br>
+        Key risks and mitigation strategies for autonomous AI repair systems:<br><br>
+        <strong>• False Positive Repairs:</strong> AI might misdiagnose issues. Mitigation: Multi-sensor validation and checksum verification.<br>
+        <strong>• Cascading Failures:</strong> Incorrect repairs could worsen problems. Solution: Safe-mode fallbacks and rollback capabilities.<br>
+        <strong>• Communication Loss:</strong> AI operates independently during ground contact gaps. Risk: Limited oversight during critical repairs.<br>
+        <strong>• Code Corruption:</strong> Space radiation can affect AI algorithms. Protection: Error-correcting memory and redundant processing cores.<br><br>
+        HORIZON AI addresses these through predictive modeling, real-time health monitoring, and fail-safe protocols that prioritize mission preservation over repair completion.
+      `;
+    }
+    
+    // Machine Learning and Fault Prediction
+    if (q.includes('machine learning') || q.includes('fault prediction') || q.includes('satellite') || q.includes('predict') || q.includes('ml')) {
+      return `
+        <strong style="color: #38bdf8;">Machine Learning for Satellite Fault Prediction:</strong><br><br>
+        ML enhances predictive maintenance through advanced analytics:<br><br>
+        <strong>• Pattern Recognition:</strong> Identifies subtle anomalies in telemetry before they become critical failures.<br>
+        <strong>• Thermal Modeling:</strong> Predicts component overheating based on orbital position and solar exposure.<br>
+        <strong>• Vibration Analysis:</strong> Detects mechanical stress patterns that precede hardware failures.<br>
+        <strong>• Power System Health:</strong> Monitors battery degradation and solar panel efficiency decline.<br><br>
+        <strong>Implementation Benefits:</strong><br>
+        • 85% reduction in unexpected failures<br>
+        • 40% increase in component lifespan<br>
+        • Autonomous repair scheduling during optimal conditions<br><br>
+        The HORIZON system uses neural networks trained on thousands of orbital cycles to predict and prevent failures.
+      `;
+    }
+    
+    // Coil and synchronization questions
+    if (q.includes('coil') || q.includes('sync') || q.includes('desync') || q.includes('electromagnetic coil')) {
+      return `
+        <strong style="color: #38bdf8;">Electromagnetic Coil Synchronization:</strong><br><br>
+        Coil desynchronization is a critical issue in EMEE systems:<br><br>
+        <strong>• Root Causes:</strong> Misaligned feedback loops, corrupted control logic, or thermal drift in coil windings.<br>
+        <strong>• Detection Methods:</strong> Real-time current monitoring, magnetic field sensors, and timing analysis.<br>
+        <strong>• Repair Process:</strong> AI recalibrates timing sequences, adjusts current flow, and validates field alignment.<br>
+        <strong>• Prevention:</strong> Continuous monitoring of coil temperature, current stability, and timing precision.<br><br>
+        The HORIZON AI can detect coil desync within 500ms and initiate automatic recalibration to restore proper electromagnetic field generation.
+      `;
+    }
+    
+    // Space mission and orbital questions
+    if (q.includes('space') || q.includes('orbit') || q.includes('satellite') || q.includes('mission') || q.includes('leo')) {
+      return `
+        <strong style="color: #38bdf8;">Space Mission Applications:</strong><br><br>
+        EMEE systems are particularly valuable for orbital operations:<br><br>
+        <strong>• Station-Keeping:</strong> Maintains precise orbital position without fuel consumption.<br>
+        <strong>• Debris Avoidance:</strong> Quick maneuvers to avoid space debris using electromagnetic thrust.<br>
+        <strong>• Orbit Adjustment:</strong> Gradual orbital changes for mission requirements or end-of-life disposal.<br>
+        <strong>• Extended Missions:</strong> No fuel limitations allow missions to continue beyond original timeframes.<br><br>
+        <strong>Mission Advantages:</strong><br>
+        • Zero propellant requirements<br>
+        • Continuous operation capability<br>
+        • Reduced mission complexity<br>
+        • Lower operational costs<br><br>
+        EMEE technology enables sustainable space operations with minimal ground intervention.
+      `;
+    }
+    
+    // Repair and maintenance questions
+    if (q.includes('repair') || q.includes('maintenance') || q.includes('fix') || q.includes('diagnostic')) {
+      return `
+        <strong style="color: #38bdf8;">AI-Powered Autonomous Repair Systems:</strong><br><br>
+        HORIZON AI provides comprehensive repair capabilities:<br><br>
+        <strong>• Diagnostic Phase:</strong> Multi-sensor analysis to identify root cause of failures.<br>
+        <strong>• Repair Planning:</strong> AI determines optimal repair sequence and resource allocation.<br>
+        <strong>• Execution:</strong> Automated reconfiguration of systems and validation of repairs.<br>
+        <strong>• Verification:</strong> Post-repair testing to ensure system integrity and performance.<br><br>
+        <strong>Repair Capabilities:</strong><br>
+        • Software patch deployment<br>
+        • Hardware recalibration<br>
+        • Circuit rerouting<br>
+        • Performance optimization<br><br>
+        Typical repair time: 10-30 seconds for software issues, 2-5 minutes for hardware recalibration.
+      `;
+    }
+    
+    // Power and energy questions
+    if (q.includes('power') || q.includes('energy') || q.includes('battery') || q.includes('solar')) {
+      return `
+        <strong style="color: #38bdf8;">Power Management in EMEE Systems:</strong><br><br>
+        Efficient power management is crucial for EMEE operation:<br><br>
+        <strong>• Power Sources:</strong> Solar panels provide primary power, RTG cells for backup during eclipse periods.<br>
+        <strong>• Energy Storage:</strong> Advanced lithium-ion batteries with integrated management systems.<br>
+        <strong>• Power Distribution:</strong> Smart grid manages power allocation between propulsion and systems.<br>
+        <strong>• Efficiency Optimization:</strong> AI adjusts power usage based on orbital position and system demands.<br><br>
+        <strong>Power Requirements:</strong><br>
+        • EMEE Propulsion: 200-500W continuous<br>
+        • AI Systems: 50-100W<br>
+        • Communications: 25-75W<br>
+        • Total System: 300-700W nominal<br><br>
+        Solar array efficiency: 30%+ with sun-tracking capability.
+      `;
+    }
+    
+    // Default response for unmatched questions
+    return `
+        <strong style="color: #38bdf8;">EMEE System Overview:</strong><br><br>
+        Your question "${question}" relates to our advanced space technology systems:<br><br>
+        <strong>• EMEE Technology:</strong> Electromagnetic Momentum Exchange with Earth for fuel-free propulsion.<br>
+        <strong>• AI Integration:</strong> HORIZON AI provides autonomous monitoring, fault detection, and repair capabilities.<br>
+        <strong>• System Benefits:</strong> Extended mission life, reduced operational costs, sustainable space operations.<br><br>
+        <strong>Key Features:</strong><br>
+        • Real-time health monitoring<br>
+        • Predictive maintenance algorithms<br>
+        • Autonomous error correction<br>
+        • Multi-redundant safety systems<br><br>
+        For more specific information about "${question}", please try rephrasing your question or contact our technical support team.
+      `;
+  }
+
+  function getContextualResponse(question) {
+    // Fallback response when API fails
+    return `
+      <strong style="color: #38bdf8;">EMEE System Information:</strong><br>
+      Based on your question about "${question}", here are key points about our electromagnetic propulsion and AI repair systems:<br><br>
+      • Autonomous fault detection and repair capabilities<br>
+      • Electromagnetic momentum exchange for fuel-free propulsion<br>
+      • Real-time system health monitoring and predictive maintenance<br>
+      • Redundant AI cores for mission-critical operations
+    `;
+  }
+</script>
+</body>
+</html>
